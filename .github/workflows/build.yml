@@ -1,4 +1,3 @@
-
 name: Build HyperGallery APK
 
 on:
@@ -32,31 +31,54 @@ jobs:
 
       - name: Install SDK packages
         run: |
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-34" "build-tools;34.0.0"
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses || true
+          "$SDKM" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.9
 
-      - name: Build debug APK
-        run: gradle :app:assembleDebug --stacktrace
+      - name: Find Gradle Project
+        run: |
+          SETTINGS_FILE=$(find . -type f \( -name "settings.gradle" -o -name "settings.gradle.kts" \) -not -path "*/.gradle/*" -print -quit)
 
-      - name: Build release APK
-        run: gradle :app:assembleRelease --stacktrace
+          if [ -z "$SETTINGS_FILE" ]; then
+            echo "ERROR: Gradle settings file not found!"
+            find . -maxdepth 5 -type f
+            exit 1
+          fi
 
-      - name: Upload debug APK
+          PROJECT_DIR=$(dirname "$SETTINGS_FILE")
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+
+          echo "Gradle project found at: $PROJECT_DIR"
+          ls -la "$PROJECT_DIR"
+
+      - name: Verify Gradle Project
+        run: |
+          test -f "$PROJECT_DIR/app/build.gradle.kts" || test -f "$PROJECT_DIR/app/build.gradle"
+
+      - name: Build Debug APK
+        run: gradle -p "$PROJECT_DIR" :app:assembleDebug --stacktrace
+
+      - name: Build Release APK
+        run: gradle -p "$PROJECT_DIR" :app:assembleRelease --stacktrace
+
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: HyperGallery-debug
-          path: app/build/outputs/apk/debug/*.apk
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
 
-      - name: Upload release APK
+      - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
           name: HyperGallery-release
-          path: app/build/outputs/apk/release/*.apk
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
 
       - name: Publish GitHub Release
         if: github.event_name != 'pull_request'
@@ -64,5 +86,5 @@ jobs:
         with:
           tag_name: build-${{ github.run_number }}
           name: HyperGallery build ${{ github.run_number }}
-          files: app/build/outputs/apk/release/*.apk
+          files: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/release/*.apk
           
