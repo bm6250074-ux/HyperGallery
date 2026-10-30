@@ -1,3 +1,4 @@
+
 name: Build HyperGallery APK
 
 on:
@@ -40,24 +41,22 @@ jobs:
           gradle-version: 8.9
 
       - name: Build debug APK
-        working-directory: HyperGallery
         run: gradle :app:assembleDebug --stacktrace
 
       - name: Build release APK
-        working-directory: HyperGallery
         run: gradle :app:assembleRelease --stacktrace
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: HyperGallery-debug
-          path: HyperGallery/app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/debug/*.apk
 
       - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
           name: HyperGallery-release
-          path: HyperGallery/app/build/outputs/apk/release/*.apk
+          path: app/build/outputs/apk/release/*.apk
 
       - name: Publish GitHub Release
         if: github.event_name != 'pull_request'
@@ -65,5 +64,5 @@ jobs:
         with:
           tag_name: build-${{ github.run_number }}
           name: HyperGallery build ${{ github.run_number }}
-          files: HyperGallery/app/build/outputs/apk/release/*.apk
+          files: app/build/outputs/apk/release/*.apk
           
