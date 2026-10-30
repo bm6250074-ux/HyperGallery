@@ -1,3 +1,4 @@
+
 name: Build HyperGallery APK
 
 on:
@@ -12,6 +13,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,19 +24,16 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      # The runner already ships an Android SDK ($ANDROID_HOME); just accept its licenses.
       - name: Accept Android SDK licenses
         run: |
           mkdir -p "$ANDROID_HOME/licenses"
-          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$ANDROID_HOME/licenses/android-sdk-license"
-          echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" > "$ANDROID_HOME/licenses/android-sdk-preview-license"
+          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$ANDROID_HOME/licenses/android-sdk-license"
+          echo "84831b9409646a918e30573bab4c9c91346d8abd" > "$ANDROID_HOME/licenses/android-sdk-preview-license"
 
       - name: Install SDK packages
         run: |
-          set +o pipefail
-          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          yes | "$SDKM" --licenses > /dev/null || true
-          "$SDKM" "platforms;android-34" "build-tools;34.0.0" || true
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -42,22 +41,24 @@ jobs:
           gradle-version: 8.9
 
       - name: Build debug APK
+        working-directory: HyperGallery
         run: gradle :app:assembleDebug --stacktrace
 
       - name: Build release APK
+        working-directory: HyperGallery
         run: gradle :app:assembleRelease --stacktrace
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: HyperGallery-debug
-          path: app/build/outputs/apk/debug/*.apk
+          path: HyperGallery/app/build/outputs/apk/debug/*.apk
 
       - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
           name: HyperGallery-release
-          path: app/build/outputs/apk/release/*.apk
+          path: HyperGallery/app/build/outputs/apk/release/*.apk
 
       - name: Publish GitHub Release
         if: github.event_name != 'pull_request'
@@ -65,5 +66,5 @@ jobs:
         with:
           tag_name: build-${{ github.run_number }}
           name: HyperGallery build ${{ github.run_number }}
-          files: app/build/outputs/apk/release/*.apk
+          files: HyperGallery/app/build/outputs/apk/release/*.apk
           
